@@ -20,7 +20,18 @@ Usage: cymru-lookup <filename>
  comment column shown as the 'addr-count:' value.
 ```
 
-****
+## Example
+```
+$ ./cymru-lookup ipv4-example-list.txt 
+Okay - input file: ipv4-example-list.txt
+Okay - output file: ipv4-example-list.txt-cymru.txt
+
+$ cat ipv4-example-list.txt-cymru.txt 
+Bulk mode; whois.cymru.com [2019-09-28 04:58:45 +0000]
+19281   | 9.9.9.0          | hit-count:1     | QUAD9-AS-1 - Quad9, US
+15169   | 8.8.8.0          | hit-count:1     | GOOGLE - Google LLC, US
+13335   | 1.1.1.0          | hit-count:1     | CLOUDFLARENET - Cloudflare, Inc., US
+```
 
 ## Authors
 [Nicholas de Jong](https://nicholasdejong.com)
