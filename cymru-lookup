@@ -74,7 +74,7 @@ temp_filename_b='/tmp/cymru-lookup.'`head /dev/urandom | md5sum | head -c8`
 cat "${input_filename}" |  cut -d'.' -f1-3 | sort | uniq -c | sort -r -n | tr '\n' '~' | sed 's/~/\.0\/24\n/g' | sed 's/^\s*//g' > "${temp_filename_a}"
 
 echo 'begin' > ${temp_filename_b}
-cat ${temp_filename_a} | awk '{ print $2 " hit-count:" $1}' >> ${temp_filename_b}
+cat ${temp_filename_a} | awk '{ print $2 " addr-count:" $1}' >> ${temp_filename_b}
 echo 'end' >> ${temp_filename_b}
 
 #echo ${temp_filename_b}
