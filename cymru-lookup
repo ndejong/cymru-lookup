@@ -1,0 +1,88 @@
+#!/bin/sh
+
+# cymru-lookup
+
+# ===
+# Copyright (c) 2019 Verb Networks Pty Ltd <contact@verbnetworks.com>
+# Copyright (c) 2019 Nicholas de Jong <me@nicholasdejong.com>
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+# 
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+# ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+# ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# ===
+
+set -e
+
+if [ -z ${1} ]; then
+    echo ""
+    echo "cymru-lookup is a bash-wrapper tool around the GNU version of netcat"
+    echo "and the ip-to-asn lookup service provided by cymru, described here"
+    echo " - https://www.team-cymru.com/IP-ASN-mapping.html#whois"
+    echo "The last octet of (IPv4) the input addresses is stripped and thus"
+    echo "grouped into their respective /24 netblock, this is bacause the "
+    echo "smallest possible public netblock via external-BGP is a /24."
+    echo ""
+    echo "Usage: cymru-lookup <filename>"
+    echo " <filename> must be a flat file containing ip-addresses only."
+    echo " Duplicate address values are counted and shown in the cymru output"
+    echo " comment column shown as the 'addr-count:' value."
+    echo ""
+    exit
+fi
+
+if [ ! -f ${1} ]; then
+    >&2 echo "ERROR: Unable to locate input <filename>: ${1}"
+    exit
+fi
+
+if [ $(which netcat | wc -l) -lt 1 ]; then
+    >&2 echo "ERROR: Unable to locate required GNU netcat binary in your \$PATH"
+    exit
+fi
+
+if [ $(netcat -V 2>&1 | grep 'GNU Netcat' | wc -l) -lt 1 ]; then
+    echo "ERROR: Wrong netcat found you MUST use the GNU Netcat available at http://netcat.sourceforge.net/"
+    exit
+fi
+
+# ===
+
+input_filename=${1}
+>&2 echo "Okay - input file: ${input_filename}"
+
+temp_filename_a='/tmp/cymru-lookup.'`head /dev/urandom | md5sum | head -c8`
+temp_filename_b='/tmp/cymru-lookup.'`head /dev/urandom | md5sum | head -c8`
+
+cat "${input_filename}" |  cut -d'.' -f1-3 | sort | uniq -c | sort -r -n | tr '\n' '~' | sed 's/~/\.0\/24\n/g' | sed 's/^\s*//g' > "${temp_filename_a}"
+
+echo 'begin' > ${temp_filename_b}
+cat ${temp_filename_a} | awk '{ print $2 " hit-count:" $1}' >> ${temp_filename_b}
+echo 'end' >> ${temp_filename_b}
+
+#echo ${temp_filename_b}
+#exit
+
+netcat whois.cymru.com 43 < ${temp_filename_b} > ${input_filename}-cymru.txt
+>&2 echo "Okay - output file: ${input_filename}-cymru.txt"
+
+rm -f ${temp_filename_a}
+rm -f ${temp_filename_b}
+
